@@ -42,8 +42,6 @@ linyi API 的 Codex Skills 集合。安装后，可直接让 Codex 调用 linyi 
 
 图库支持按文件名、模型或提示词搜索，可切换排序方式和每页数量。可以选择本页，也可以一次选择当前搜索结果中的全部作品，然后批量打包为 ZIP 下载或删除。删除前会要求确认，确认后文件会直接从本地磁盘移除且无法恢复。点击图片仍可查看生成信息、复制提示词、下载原图或单独删除该作品。
 
-> 不熟悉 Codex 配置？查看图文教程：[使用 CC Switch 配置 Codex 接入 linyi API](docs/codex-cc-switch.md)。
-
 ### 部署到 Vercel
 
 把本仓库导入 Vercel 后直接部署即可，根目录的 `vercel.json` 已包含构建命令和输出目录，不需要在 Vercel 配置 API Key 或其他环境变量。同一套 Vue 页面会自动判断运行环境：由 Python 启动时使用本地 API、共享图库和 Codex 历史；静态部署时使用浏览器运行时并直接请求 linyi API。浏览器版可同步提示词库；随构建发布的本地快照用于首次显示和网络失败时回退。
@@ -272,7 +270,6 @@ skills/
 
 - [linyi 官网 / API 控制台](https://image.linyiai.one/)
 - [本仓库](https://github.com/abutao/linyi-skills)
-- [Codex + CC Switch 图文配置教程](docs/codex-cc-switch.md)
 - [安全问题报告](SECURITY.md)
 
 模型、价格、限额和可用性以 [linyi 控制台](https://image.linyiai.one/) 为准。Linyi Skills 使用 [MIT License](LICENSE) 发布。
