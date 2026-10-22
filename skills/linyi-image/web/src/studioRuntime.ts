@@ -710,8 +710,17 @@ class LocalRuntime implements StudioRuntime {
       ...options,
       headers: { ...(options.headers || {}), 'X-Linyi-Token': this.token },
     })
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`)
+    const raw = await response.text()
+    let data: any = null
+    try {
+      data = raw ? JSON.parse(raw) : null
+    } catch {
+      if (response.status === 403) {
+        throw new Error('工作台会话已失效，请刷新页面后重试')
+      }
+      throw new Error(`本地接口返回了非 JSON 响应（HTTP ${response.status}）`)
+    }
+    if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`)
     return data
   }
 

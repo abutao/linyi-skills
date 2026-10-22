@@ -2222,9 +2222,13 @@ class Handler(BaseHTTPRequestHandler):
             if archive_path:
                 archive_path.unlink(missing_ok=True)
 
+    def reject(self, status: HTTPStatus, message: str) -> None:
+        """Return a JSON error for API clients instead of the default HTML page."""
+        self.json_response({"error": message}, int(status))
+
     def do_GET(self) -> None:
         if not self.allowed_host():
-            self.send_error(HTTPStatus.FORBIDDEN); return
+            self.reject(HTTPStatus.FORBIDDEN, "forbidden host"); return
         parsed_path = urlparse(self.path)
         if parsed_path.path == "/favicon.ico":
             self.send_response(HTTPStatus.NO_CONTENT); self.end_headers(); return
@@ -2297,8 +2301,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
-        if not self.allowed_host() or not secrets.compare_digest(self.headers.get("X-Linyi-Token", ""), self.server.token):
-            self.send_error(HTTPStatus.FORBIDDEN); return
+        if not self.allowed_host():
+            self.reject(HTTPStatus.FORBIDDEN, "forbidden host"); return
+        if not secrets.compare_digest(self.headers.get("X-Linyi-Token", ""), self.server.token):
+            self.reject(HTTPStatus.FORBIDDEN, "工作台会话已失效，请刷新页面后重试"); return
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if length > MAX_BODY_BYTES:
