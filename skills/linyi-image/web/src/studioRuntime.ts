@@ -89,8 +89,14 @@ const DEFAULT_MODEL = 'gpt-image-2'
 const MAX_INPUT_IMAGES = 5
 const MAX_INPUT_BYTES = 20 * 1024 * 1024
 const INPUT_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
-const PROMPT_REGISTRY_BASE =
-  'https://raw.githubusercontent.com/abutao/linyi-skills/main/skills/linyi-image/assets/prompt-registry'
+// Prefer same-origin mirror (local studio / Vercel). Remote GitHub raw is fallback only.
+const PROMPT_REGISTRY_BASE = (() => {
+  try {
+    return new URL('prompt-registry', document.baseURI).toString().replace(/\/$/, '')
+  } catch {
+    return 'https://raw.githubusercontent.com/abutao/linyi-skills/main/skills/linyi-image/assets/prompt-registry'
+  }
+})()
 const PROMPT_REGISTRY_MANIFEST_MAX_BYTES = 128 * 1024
 const PROMPT_REGISTRY_PAYLOAD_MAX_BYTES = 8 * 1024 * 1024
 const PROMPT_REGISTRY_TIMEOUT_MS = 30_000

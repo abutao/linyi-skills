@@ -73,11 +73,13 @@ MAX_PREVIEW_BYTES = 12 * 1024 * 1024
 MAX_GALLERY_BATCH = 10_000
 SOURCE_TIMEOUT = 12
 ASSET_DIR = Path(__file__).resolve().parent.parent / "assets" / "prompt-studio"
+REGISTRY_DIR = Path(__file__).resolve().parent.parent / "assets" / "prompt-registry"
 GENERATE_SCRIPT = Path(__file__).resolve().parent / "generate.py"
 CACHE_PATH = CACHE_DIR / "prompt-library.json"
 PREVIEW_CACHE_DIR = CACHE_DIR / "previews"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"}
-# Self-hosted prompt registry mirror under this skill's assets/prompt-registry.
+# Self-hosted prompt registry mirror. Local sync prefers REGISTRY_DIR; remote URL
+# is for browser mode and machines without the packaged mirror files.
 # Keep the source metadata here as a fallback for an empty/offline cache; a successful
 # registry sync replaces it with the metadata from manifest.json.
 REGISTRY_BASE_URL = (
@@ -454,6 +456,20 @@ def cached_source_definition(raw: object, fallback: dict[str, Any] | None = None
 
 def registry_url(path: object) -> str:
     return f"{REGISTRY_BASE_URL.rstrip('/')}/{registry_path(path)}"
+
+
+def read_local_registry(path: object) -> bytes | None:
+    """Read a packaged registry file when the skill ships a local mirror."""
+    relative = registry_path(path)
+    target = (REGISTRY_DIR / relative).resolve()
+    if REGISTRY_DIR.resolve() not in target.parents and target != REGISTRY_DIR.resolve():
+        raise ValueError("prompt registry path escapes the local mirror")
+    if not target.is_file():
+        return None
+    payload = target.read_bytes()
+    if not payload:
+        raise ValueError(f"local prompt registry file is empty: {relative}")
+    return payload
 
 
 def registry_http_url(value: object, field: str, *, allow_empty: bool = False) -> str:
@@ -886,19 +902,20 @@ class Library:
             raise ValueError(f"prompt source exceeds {max_bytes} bytes")
         return payload
 
+    def fetch_registry_bytes(self, path: object, max_bytes: int) -> bytes:
+        """Prefer the packaged local mirror; fall back to the hosted registry URL."""
+        local = read_local_registry(path)
+        if local is not None:
+            if len(local) > max_bytes:
+                raise ValueError(f"local prompt registry exceeds {max_bytes} bytes")
+            return local
+        return self.download(registry_url(path), max_bytes, timeout=REGISTRY_TIMEOUT)
+
     def fetch_registry(self) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
         """Fetch and validate the atomic image-prompts registry snapshot."""
-        manifest_payload = self.download(
-            registry_url("manifest.json"),
-            REGISTRY_MANIFEST_MAX_BYTES,
-            timeout=REGISTRY_TIMEOUT,
-        )
+        manifest_payload = self.fetch_registry_bytes("manifest.json", REGISTRY_MANIFEST_MAX_BYTES)
         manifest, sources, raw_sources = parse_registry_manifest(manifest_payload)
-        payload = self.download(
-            registry_url(manifest["prompts_path"]),
-            REGISTRY_PAYLOAD_MAX_BYTES,
-            timeout=REGISTRY_TIMEOUT,
-        )
+        payload = self.fetch_registry_bytes(manifest["prompts_path"], REGISTRY_PAYLOAD_MAX_BYTES)
         expected_hash = hashlib.sha256(
             json.dumps(raw_sources, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8") + payload
         ).hexdigest()
