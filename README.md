@@ -272,4 +272,10 @@ skills/
 - [本仓库](https://github.com/abutao/linyi-skills)
 - [安全问题报告](SECURITY.md)
 
+## 致谢
+
+本项目基于 [yukkcat/klong-skills](https://github.com/yukkcat/klong-skills) 改编而来，向原作者 [yukkcat](https://github.com/yukkcat)、[BaikalLamb](https://github.com/BaikalLamb) 以及所有贡献者致敬。原项目以 MIT License 发布，本仓库在其基础上完成了 linyi 品牌与接口适配。
+
+内置提示词 registry 参考并镜像自 [yukkcat/image-prompts](https://github.com/yukkcat/image-prompts) 及其中汇总的开源提示词来源，同样致以感谢。
+
 模型、价格、限额和可用性以 [linyi 控制台](https://image.linyiai.one/) 为准。Linyi Skills 使用 [MIT License](LICENSE) 发布。
