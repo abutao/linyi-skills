@@ -138,11 +138,16 @@ button, [role="button"], input, select, textarea { -webkit-tap-highlight-color: 
   height: 32px;
   flex: 0 0 auto;
   place-items: center;
+  overflow: hidden;
   border-radius: var(--radius);
-  background: #171918;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 760;
+  background: #0b0b0b;
+}
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .brand-copy { display: grid; min-width: 0; flex: 1; gap: 2px; }
@@ -2391,7 +2396,7 @@ html[data-theme="dark"] :is(
   .connection-summary small
 ) { color: #979c96; }
 
-html[data-theme="dark"] .brand-mark { background: #f0f2ef; color: #111311; }
+html[data-theme="dark"] .brand-mark { background: #0b0b0b; }
 html[data-theme="dark"] .app-version { color: #70766f; }
 html[data-theme="dark"] .app-version:hover { color: #d4d8d3; }
 html[data-theme="dark"] .app-version.update-available { color: #8ec09b; }

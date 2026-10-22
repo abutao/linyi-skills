@@ -2,7 +2,7 @@
   <div class="studio-page">
     <aside class="library-sidebar" aria-label="提示词库导航">
       <div class="brand-lockup">
-        <span class="brand-mark">小</span>
+        <span class="brand-mark" aria-hidden="true"><img src="/linyi-logo.png" alt="" width="32" height="32" /></span>
         <span class="brand-copy">
           <strong>linyi</strong>
           <small>
@@ -200,7 +200,7 @@
           <Icon icon="lucide:chevron-right" />
           <strong>{{ workspaceCurrentLabel }}</strong>
         </div>
-        <div class="mobile-wordmark"><span class="brand-mark">小</span><strong>{{ mobileViewLabel }}</strong></div>
+        <div class="mobile-wordmark"><span class="brand-mark" aria-hidden="true"><img src="/linyi-logo.png" alt="" width="29" height="29" /></span><strong>{{ mobileViewLabel }}</strong></div>
         <div class="mobile-view-switch" aria-label="切换工作区">
           <button type="button" :class="{ active: activeView === 'prompts' }" title="提示词" @click="switchView('prompts')"><Icon icon="lucide:library-big" /></button>
           <button type="button" :class="{ active: activeView === 'create' }" title="创作" @click="switchView('create')"><Icon icon="lucide:wand-sparkles" /></button>
