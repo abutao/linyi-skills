@@ -77,10 +77,13 @@ GENERATE_SCRIPT = Path(__file__).resolve().parent / "generate.py"
 CACHE_PATH = CACHE_DIR / "prompt-library.json"
 PREVIEW_CACHE_DIR = CACHE_DIR / "previews"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"}
-# The registry is generated and validated by https://github.com/yukkcat/image-prompts.
+# Self-hosted prompt registry mirror under this skill's assets/prompt-registry.
 # Keep the source metadata here as a fallback for an empty/offline cache; a successful
 # registry sync replaces it with the metadata from manifest.json.
-REGISTRY_BASE_URL = "https://raw.githubusercontent.com/yukkcat/image-prompts/main/dist"
+REGISTRY_BASE_URL = (
+    "https://raw.githubusercontent.com/abutao/linyi-skills/main/"
+    "skills/linyi-image/assets/prompt-registry"
+)
 SOURCES = [
     {"id": "banana-prompt-quicker", "name": "Banana Prompt Quicker", "adapter": "json", "url": "https://glidea.github.io/banana-prompt-quicker/prompts.json", "homepage": "https://glidea.github.io/banana-prompt-quicker/", "registry_path": "sources/banana-prompt-quicker.json"},
     {"id": "davidwu-gpt-image2-prompts", "name": "DavidWu GPT Image 2 Prompts", "adapter": "json", "url": "https://raw.githubusercontent.com/davidwuw0811-boop/awesome-gpt-image2-prompts/main/prompts.json", "homepage": "https://github.com/davidwuw0811-boop/awesome-gpt-image2-prompts", "registry_path": "sources/davidwu-gpt-image2-prompts.json"},
