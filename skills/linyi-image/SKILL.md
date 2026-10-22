@@ -1,0 +1,149 @@
+---
+name: linyi-image
+description: Browse image prompt libraries, launch or deploy the image workspace, or generate and edit single images and controlled concurrent batches through the linyi API using OpenAI-compatible GPT image models or native Gemini image models. Use when the user asks Codex to find or browse image prompts, open a local or hosted image-generation webpage, draw, generate one or more images, perform image-to-image editing, create variants, compare linyi image models, or save generated raster images.
+---
+
+# linyi 生图
+
+Use `scripts/generate.py` for deterministic API calls. Never put an API key in a prompt, source file, command argument, or committed config. Direct CLI calls and Prompt Studio share `~/.linyi-image/settings.json` and use its active connection. Process or uncommitted `.env` credentials appear as a read-only `environment` connection and are used only when that connection is active. Copy `.env.example` to `.env` in the Skill directory when file-based configuration is needed.
+
+## Prompt Studio
+
+When the user asks to open, launch, or use the local prompt workspace, handle the launch for them. Do not ask the user to run Python or `npm run dev`. If Prompt Studio is already running at `http://127.0.0.1:8765`, open that page and reuse it. Otherwise, run:
+
+```shell
+python <skill-dir>/scripts/prompt_studio.py
+```
+
+Keep the server process running and report the opened local URL. The command binds to `127.0.0.1:8765`, opens the browser, and saves generated files under the shared output directory. Resolution order is `--output-dir`, `LINYI_OUTPUT_DIR`, the location saved in Prompt Studio, then `outputs/prompt-studio` in the launch directory. On the first launch it downloads the validated registry from `yukkcat/image-prompts` (`dist/manifest.json` plus its published prompt payload) in the background, then caches it under `~/.linyi-image`. The registry currently includes seven sources, including Freestylefly GPT Image 2. Later launches load the cache immediately; an older pre-registry cache is migrated automatically. Use `--refresh` to force a full update, `--port <port>` when 8765 is occupied by another application, or `--output-dir <path>` to lock the gallery/output directory for that launch. Use `npm run dev` only when explicitly developing the Vue source; it is not the end-user launch path.
+
+Prompt Studio includes multi-connection management, `/v1/models` connection testing, persistent storage-location settings, real image generation, a paginated gallery, and a non-blocking GitHub tag update check. Model sync keeps only recognized image-model families returned for that Key, rather than relying on a fixed route allowlist. Each connection keeps its own name, API address, encrypted key, synchronized model list, and default model. API addresses may be entered as a service root such as `https://image.linyiai.one` or an OpenAI SDK base ending in `/v1`; both are normalized to the service root before endpoints are built. Users can add, switch, test, update, or delete connections from the local UI, and the creation workspace selects a connection before showing that connection's image models. On Windows, direct Codex generation automatically uses the same active connection even when an environment connection also exists. It indexes supported image files under the shared output directory and records task metadata under its `.linyi/jobs` subdirectory. Direct Codex generation and web generation use the same manifest schema, so prompts, models, sizes, timings, failures, per-image details, history items, and gallery entries remain consistent. The gallery supports searching, sorting, configurable page sizes, current-page or all-filtered-result selection, batch ZIP downloads, and confirmed permanent deletion from local disk. The update center checks at most once every 12 hours, links to the newest semantic version tag, and copies a Codex update instruction; it never overwrites the running Skill itself.
+
+Keep the server local. Do not change its host binding or expose it through a tunnel. Existing keys are never returned to the browser; only masked hints are shown. On Windows, keys entered in the UI are encrypted with DPAPI for the current user; on other systems they remain in memory for the current process only. `LINYI_API_KEY` and `LINYI_BASE_URL` expose a read-only environment connection alongside UI-managed connections. Generation is delegated to `generate.py` by the local server, and each queued job captures its selected connection so later UI switching cannot change the key used by that job.
+
+## Hosted Browser Workspace
+
+The Vue workspace uses one build for local and hosted use. The local Python server injects its session token and the UI automatically uses the Python API, shared filesystem gallery, `.env`, and Codex history. A static deployment has no injected token and automatically uses direct API requests plus origin-scoped IndexedDB instead. Do not add a user-facing mode switch or require environment variables for hosted users.
+
+In browser mode, each visitor configures their own connection. API keys are encrypted at rest with a non-extractable Web Crypto key, and keys, images, settings, and history stay in that browser; Vercel does not receive or store them. Browser generation stops if the page is closed, and another browser or device does not share the data. The browser runtime's sync action fetches and validates the same `yukkcat/image-prompts` registry directly, while the bundled snapshot remains the startup and network-failure fallback. Use `scripts/export_prompt_library.py` after a registry refresh to keep that fallback current before a release.
+
+## Workflow
+
+1. For direct CLI or Codex generation, use the active connection saved by Prompt Studio. Select the read-only `environment` connection in Prompt Studio when `LINYI_API_KEY` should be used. On macOS and Linux, UI-entered keys are process-only, so use the environment connection for direct CLI calls.
+2. If current availability matters, run `--list-models`. It returns the recognized image models visible to the active Key. Choose `gpt-image-2` by default, or `gemini-3.1-flash-image-preview` when native Gemini is requested.
+   Read [references/models.md](references/models.md) when comparing current routes, protocols, quality options, or transport safeguards.
+3. Save direct Codex output in the directory resolved by `connection_store.resolve_output_directory()`, which honors `LINYI_OUTPUT_DIR`, Prompt Studio's saved location, then `<current-workspace>/outputs/prompt-studio`. Use a descriptive filename inside that directory. `generate.py` automatically records the task under `.linyi/jobs`; do not create or edit manifests manually. Only write elsewhere when the user explicitly requests another location, and note that outputs outside the shared gallery are not added to web history.
+4. For image-to-image work, identify up to five source PNG, JPEG, or WebP files and pass each one with a separate `--input-image` argument.
+5. Run:
+
+```shell
+python <skill-dir>/scripts/generate.py --model <model> --prompt "<prompt>" --name "<descriptive-name>"
+```
+
+6. While the command runs, relay meaningful progress from stderr when the user is waiting. The script reports request starts, retries, completions, failures, and a heartbeat every 30 seconds. Never invent a percentage because the upstream API does not expose one.
+7. Verify that each successful output file exists and is non-empty. When visual inspection tools are available, inspect the images before reporting completion.
+8. Parse the final job JSON from stdout. Its top-level task fields match `/api/jobs/<id>`, and generation details are under `result`, just like the web UI. Report a concise summary plus a Markdown result table. Include task name/status, prompt, model, mode, total duration, requested/succeeded/failed counts, and per-image status, duration, actual dimensions, file size, attempts, and absolute output path or error. Long prompts may be collapsed in prose, but do not omit them from the persisted task record. Do not report the secret or raw Base64 payload.
+
+Use a result table shaped like this:
+
+| Index | Status | Duration | Dimensions | Size | Attempts | Output / Error |
+| --- | --- | ---: | --- | ---: | ---: | --- |
+| 1 | Success | 91.2s | 3840x2160 | 14.4 MiB | 1 | `/absolute/path/image.png` |
+
+Progress is written to stderr and final machine-readable JSON is written to stdout. Use `--no-progress` only when a caller explicitly needs silent stderr.
+
+## Image-to-Image Editing
+
+Edit an existing image:
+
+```shell
+python <skill-dir>/scripts/generate.py --model gpt-image-2.5 --input-image source.png --input-image style.png --prompt "Keep the subject and change the background to a snowy mountain" --output outputs/prompt-studio/edited.png
+```
+
+OpenAI-compatible models send multipart requests to `/v1/images/edits`, repeating the `image` field for each reference. Gemini models send every source image as a separate `inlineData` part alongside the prompt. Accept one to five PNG, JPEG, or WebP inputs, each no larger than 20 MiB. Prompt Studio users can select, drag, or paste those references and remove them individually before generation.
+
+Use `--count` and `--concurrency` to create multiple variants from the same source set. Each request receives all original reference images; outputs are not chained into later requests.
+
+## Batch Generation
+
+Generate ten images with at most two requests in flight:
+
+```shell
+python <skill-dir>/scripts/generate.py --model gpt-image-2 --prompt "<prompt>" --output outputs/prompt-studio/image.png --count 10 --concurrency 2
+```
+
+For multiple images, the script writes `image-001.png`, `image-002.png`, and so on. `--count` accepts 1-100 and `--concurrency` accepts any positive integer; effective concurrency never exceeds `--count`. Keep concurrency at 1 unless the user requests batching, and do not infer an account's concurrency allowance from a model name.
+
+Automatic retries default to 0. A broken connection may represent a completed billable request, so inspect history and outputs before explicitly retrying with `--retries 1-5`.
+
+The default request timeout is 600 seconds, matching the Infinite Canvas stability patch. Use `--timeout` to override it when needed.
+
+## Models
+
+| Model | Protocol | Notes |
+| --- | --- | --- |
+| `gpt-image-2` | OpenAI | Default GPT-Image model. |
+| `gpt-image-2.5` | OpenAI | Same capability as `gpt-image-2` on the GPT-Image channel. |
+| `gpt-image-2.5-flare` | OpenAI | Alias on the GPT-Image channel; speed-first on the official channel. |
+| `gpt-image-2.5-sunburst` | OpenAI | Alias on the GPT-Image channel; precision-first on the official channel. |
+| `gpt-image-2-exact` | OpenAI | Strict pixel-size route; edges 64-4096, total pixels up to 4096x4096. |
+| `gpt-image-2.5-exact` | OpenAI | Same strict-size behavior as `gpt-image-2-exact`. |
+| `gpt-image-2-high` | OpenAI | 1K/2K/4K; accepts `--quality medium|high`. |
+| `gpt-image-2-vip` | OpenAI | 1K/2K/native 4K; quality is fixed to `medium`. |
+| `nano-banana2` | OpenAI | NewAPI Images route; accepts pixel, ratio, or resolution-tier sizes. |
+| `nano-banana-pro` | OpenAI | NewAPI Images route; accepts pixel, ratio, or resolution-tier sizes. |
+| `gemini-3.1-flash-image-preview` | Gemini | Native Gemini protocol only; default Gemini choice. |
+| `gemini-3-pro-image-preview` | Gemini | Native Gemini protocol only. |
+
+The official Flare and Sunburst channels accept `--quality low|medium|high|xhigh|max`; the same model IDs can be aliases on another channel, so treat the control-panel assignment as authoritative. Do not infer undocumented quality, resolution, price, or concurrency guarantees from model names.
+
+Model discovery is family-based: `gpt-image-*` except `-codex` and `nano-banana*` use OpenAI Images; `gemini-*` image models use native Gemini. This keeps chat models out while allowing newly returned models in a known image family. Unknown families are rejected until their image endpoint and protocol are verified.
+
+## Useful Commands
+
+Check access without generating an image:
+
+```shell
+python <skill-dir>/scripts/generate.py --check --model gpt-image-2
+```
+
+List every model visible to the current key:
+
+```shell
+python <skill-dir>/scripts/generate.py --list-models
+```
+
+Set an explicit OpenAI-compatible size:
+
+```shell
+python <skill-dir>/scripts/generate.py --model gpt-image-2 --size 1024x1024 --prompt "A red paper lantern on white" --output outputs/prompt-studio/lantern.png
+```
+
+Use the same scaling rule as Prompt Studio's ratio/resolution picker. Start with the 1K base size for the requested ratio, then target 2x dimensions for 2K or 4x dimensions for 4K. Before sending a request, proportionally reduce the target when needed so the longest edge does not exceed `3840` pixels and the total does not exceed `8,294,400` pixels. Every listed ratio supports all three tiers, but high tiers may show `upstream limit` and use a smaller actual size:
+
+| Ratio | 1K base `--size` |
+| --- | --- |
+| `1:1` | `1024x1024` |
+| `2:3` | `1024x1536` |
+| `3:2` | `1536x1024` |
+| `3:4` | `1024x1365` |
+| `4:3` | `1365x1024` |
+| `5:4` | `1152x928` |
+| `4:5` | `928x1152` |
+| `9:16` | `1080x1920` |
+| `16:9` | `1920x1080` |
+| `21:9` | `1584x672` |
+
+For example, `2:3` is `1024x1536` at 1K and `2048x3072` at 2K; its 4K target is automatically reduced to a legal size. `16:9` at 4K resolves to `3840x2160`, while `1:1` at 4K resolves to `2880x2880`.
+
+For automatic sizing, omit `--size`. Availability still depends on the selected model and upstream service. The script detects the returned image bytes and uses the matching `.png`, `.jpg`, `.webp`, or `.gif` suffix; the requested output suffix is not treated as a conversion instruction.
+
+For Gemini models, use `--aspect-ratio` and `--image-size 1K|2K|4K`; do not pass `--size`. The script sends only native `generationConfig.imageConfig`, as documented. It first reads `file_data.file_uri` / `fileData.fileUri`, then Markdown image URLs, and finally `inlineData` / `inline_data` Base64 fallback data.
+
+## Failures
+
+- `401` or `403`: verify Prompt Studio's active connection, its Key, and the selected model's access.
+- `404`: use either the service root or a base ending in `/v1`; the Skill normalizes both. OpenAI uses `/v1/images/generations`; Gemini uses `/v1beta/models/{model}:generateContent`.
+- Model missing from `--check`: the key's group or current routing does not expose that model.
+- No image in a successful response: preserve the response summary, do not print large Base64 data, and ask the user whether to retry with another model.
+- Partial batch failure: successful numbered files remain on disk; report the failure and inspect existing outputs before retrying to avoid duplicate charges.

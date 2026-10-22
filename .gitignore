@@ -1,0 +1,15 @@
+__pycache__/
+.ruff_cache/
+node_modules/
+.playwright-cli/
+.playwright-mcp/
+output/playwright/
+tmp/
+*.py[cod]
+.env
+.env.*
+!.env.example
+outputs/
+generated.*
+studio.out
+studio.err

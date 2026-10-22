@@ -1,0 +1,285 @@
+# Linyi Skills
+
+linyi API 的 Codex Skills 集合。安装后，可直接让 Codex 调用 linyi API 完成图片生成和批量出图，无需在对话中传递 API Key。
+
+当前提供 `linyi-image`：兼容 OpenAI Images 协议与 Gemini 原生图片协议，支持文生图、图生图、模型发现、并发生成、失败重试和本地文件输出。
+
+## 功能
+
+- 在 Codex 对话中直接生成图片
+- 使用已有图片生成修改版本或多个变体
+- 自动选择 OpenAI 或 Gemini 请求协议
+- 通过 `/v1/models` 查询当前 Key 可用的图片模型，并按模型族自动选择协议
+- 单次生成 1-100 张图片
+- 并发数由用户按任务和账户能力设置
+- 默认不自动重试付费请求；需要时可显式开启指数退避重试
+- 实时显示请求、等待、重试、成功和失败状态
+- 输出包含耗时、实际分辨率和文件大小的 JSON 汇总
+- 校验响应大小和图片格式，拒绝异常内容
+- API Key 仅保留在本机或当前浏览器；网页可直接配置，命令行可使用环境变量
+- 本地图库集中查看生成结果，并按需加载缩略图
+- Codex 与网页共用任务历史、提示词和逐图生成数据
+- 同一套网页可直接部署到 Vercel，云端用户的数据互相隔离
+- 定期检查 GitHub 版本标签，发现新版时提醒并生成安全的 Skill 更新指令
+
+## 快速开始
+
+### 本地提示词工作台
+
+安装 Skill 后，把下面这句话发送给 Codex；Codex 会自动启动本地服务并打开网页，不需要手动运行 Python 或 `npm run dev`：
+
+```text
+使用 $linyi-image 打开本地提示词工作台。
+```
+
+程序会打开 `http://127.0.0.1:8765`。首次启动会在后台从 [yukkcat/image-prompts](https://github.com/yukkcat/image-prompts) 的 `dist/manifest.json` 和标准化提示词快照下载全部内置提示词；后续启动直接读取本地缓存，旧版逐个来源缓存会自动迁移。当前快照包含 7 个来源（包括 Freestylefly GPT Image 2）。网页支持搜索、来源与分类筛选、文生图/图生图、批量数量、并发设置和实时生成状态。图生图可以通过文件选择、拖拽或剪贴板粘贴一次添加最多 5 张参考图，并逐张预览或移除。打开旧任务后可以修改提示词、模型、尺寸、连接、数量等参数继续生成；新图片会作为新批次追加到原任务，旧图片和各自的生成参数都会保留。需要完全独立的任务时再点击“新建”。
+
+工作台每 12 小时至多检查一次 GitHub 版本标签。发现新版后，顶部会显示“更新”入口；“指南 → 更新 Skill”中可以重新检查、查看对应标签或复制给 Codex 的安全更新指令。工作台只负责提醒，不会自行覆盖正在使用的 Skill，也不会触碰连接设置、API Key 或图库文件。
+
+点击右上角的设置按钮可以切换“连接”和“存储”。连接设置支持填写 API 地址和 API Key，并通过 `/v1/models` 测试连接、更新图片模型列表。API 地址既可填 `https://image.linyiai.one`，也可填 SDK 使用的 `https://image.linyiai.one/v1`；程序会自动标准化，避免拼成重复的 `/v1/v1`。Windows 会使用当前用户的 DPAPI 加密保存 Key，网页与 Codex 直调会读取同一份 `~/.linyi-image/settings.json`，并严格使用其中当前选中的连接；其他系统只在本次工作台进程中保留网页填写的 Key，跨进程调用仍建议使用环境变量。已保存的 Key 不会返回给网页。
+
+网页和 Codex 直接生成的图片及任务记录共用同一个目录：默认保存在启动目录的 `outputs/prompt-studio` 下，任务元数据写入其中的 `.linyi/jobs`。可在“设置 → 存储”中选择、打开或恢复图库位置；新位置会持久化到当前用户的 `~/.linyi-image/settings.json`，Codex 后续直接生成也会自动使用。切换位置不会移动旧作品。`LINYI_OUTPUT_DIR` 可以锁定目录，网页单次启动也可用 `--output-dir` 覆盖；优先级为 `--output-dir`、`LINYI_OUTPUT_DIR`、网页保存位置、默认位置。
+
+图库支持按文件名、模型或提示词搜索，可切换排序方式和每页数量。可以选择本页，也可以一次选择当前搜索结果中的全部作品，然后批量打包为 ZIP 下载或删除。删除前会要求确认，确认后文件会直接从本地磁盘移除且无法恢复。点击图片仍可查看生成信息、复制提示词、下载原图或单独删除该作品。
+
+> 不熟悉 Codex 配置？查看图文教程：[使用 CC Switch 配置 Codex 接入 linyi API](docs/codex-cc-switch.md)。
+
+### 部署到 Vercel
+
+把本仓库导入 Vercel 后直接部署即可，根目录的 `vercel.json` 已包含构建命令和输出目录，不需要在 Vercel 配置 API Key 或其他环境变量。同一套 Vue 页面会自动判断运行环境：由 Python 启动时使用本地 API、共享图库和 Codex 历史；静态部署时使用浏览器运行时并直接请求 linyi API。浏览器版点击“同步”也会直接从 `yukkcat/image-prompts` 拉取并校验最新 registry；随构建发布的快照用于首次显示和网络失败时回退。
+
+云端页面中的连接、加密 Key、图片和任务历史都保存在当前浏览器的 IndexedDB 中，不会上传到 Vercel，也不会与其他访问者共享。浏览器 Key 使用不可导出的 Web Crypto 密钥加密保存。清除站点数据会同时清除这些本地数据；不同浏览器或设备之间不会自动同步，关闭页面也会中断尚未完成的生成任务。
+
+### 1. 安装 Skill
+
+把下面这句话发送给 Codex：
+
+```text
+请从 https://github.com/abutao/linyi-skills/tree/main/skills/linyi-image 安装这个 Skill。
+```
+
+也可以直接运行 Codex 自带的 Skill 安装器。
+
+Windows PowerShell：
+
+```powershell
+python "$env:USERPROFILE\.codex\skills\.system\skill-installer\scripts\install-skill-from-github.py" `
+  --repo abutao/linyi-skills `
+  --path skills/linyi-image
+```
+
+macOS、Linux 或 WSL：
+
+```bash
+python ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
+  --repo abutao/linyi-skills \
+  --path skills/linyi-image
+```
+
+安装完成后，重新打开 Codex 或开始一个新任务。
+
+### 2. 配置 API Key
+
+先在[linyi API 控制台](https://image.linyiai.one/keys)创建 Key。在 Windows 上，只需在网页右上角打开“连接设置”，填写 Key 后点击“测试连接”和“保存设置”。网页生成和 Codex 直接调用 `generate.py` 都会使用当前选中的连接，无需再配置 `.env` 或系统环境变量。
+
+自动化部署，或者在 macOS、Linux、WSL 中跨进程调用时，可以复制根目录的 `.env.example`：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+如果只安装了 `linyi-image` Skill，也可以把 Skill 目录内的示例复制为同目录的 `.env`：
+
+```powershell
+Copy-Item <skill-dir>\.env.example <skill-dir>\.env
+```
+
+程序会从当前目录、Skill 目录或仓库根目录读取 `.env`，但不会覆盖已经存在的系统环境变量。`.env` 已被 Git 忽略，里面的 Key 仍是明文，只适合当前用户可控的电脑。也可以直接设置系统环境变量：
+
+Windows PowerShell：
+
+```powershell
+[Environment]::SetEnvironmentVariable(
+  "LINYI_API_KEY",
+  "sk-替换成你的密钥",
+  "User"
+)
+```
+
+macOS、Linux 或 WSL：
+
+```bash
+export LINYI_API_KEY="sk-替换成你的密钥"
+```
+
+设置用户环境变量后，需要完全退出并重新打开 Codex。不要把真实 Key 写入聊天、提交、Issue 或截图，也不要提交本地 `.env`。环境变量会在网页中显示为一个只读的“环境变量”连接，但不会覆盖已选中的其他连接；只有网页当前选中“环境变量”时，网页与 Codex 才会使用其中的 Key。若共享设置里记录的连接 ID 已不存在，系统按“可用的环境变量连接、首个已保存连接”的顺序回退。
+
+### 3. 开始使用
+
+生成单张图片：
+
+```text
+使用 $linyi-image，通过 gpt-image-2 生成一张白底产品图，保存到 outputs/prompt-studio/product.png。
+```
+
+批量生成：
+
+```text
+使用 $linyi-image，通过 gpt-image-2 生成 10 张产品图，并发数为 2，保存到 outputs/prompt-studio/product.png。
+```
+
+批量文件会自动编号为 `product-001.png`、`product-002.png`，依次类推。
+
+图生图：
+
+```text
+使用 $linyi-image，以 assets/source.png 为输入，保持主体不变，把背景改成雪山，保存到 outputs/prompt-studio/edited.png。
+```
+
+图生图支持最多 5 张 PNG、JPEG 或 WebP 参考图，每张最大 20 MiB。GPT Image 与 Nano Banana 使用 `/v1/images/edits`，多张图片以重复的 `image` 字段发送；Gemini 模型通过 `/v1beta/models/{model}:generateContent` 把每张图片作为独立的 `inlineData` 与提示词一起发送。
+
+## 模型与协议
+
+| 模型 | 协议 | 说明 |
+| --- | --- | --- |
+| `gpt-image-2` / `gpt-image-2.5` | OpenAI Images | GPT-Image 标准能力；前者是默认模型 |
+| `gpt-image-2.5-flare` | OpenAI Images | GPT-Image 渠道中为同能力别名；官方渠道中速度优先 |
+| `gpt-image-2.5-sunburst` | OpenAI Images | GPT-Image 渠道中为同能力别名；官方渠道中精度优先 |
+| `gpt-image-2-exact` / `gpt-image-2.5-exact` | OpenAI Images | 精确像素尺寸，最高 4K |
+| `gpt-image-2-high` | OpenAI Images | 原生最高 4K，可选 `medium` / `high` 质量 |
+| `gpt-image-2-vip` | OpenAI Images | 原生最高 4K，质量固定为 `medium` |
+| `nano-banana2` / `nano-banana-pro` | OpenAI Images | NewAPI Images 路由，不走 Gemini 原生协议 |
+| `gemini-3.1-flash-image-preview` | Gemini `generateContent` | Gemini 默认选择 |
+| `gemini-3-pro-image-preview` | Gemini `generateContent` | Gemini Pro 图片模型 |
+
+模型同步不再依赖固定白名单：程序会从 `/v1/models` 的实时响应中保留 `gpt-image-*`、`nano-banana*` 和 Gemini 图片模型，过滤对话模型，并按模型族路由协议。`gpt-image-2-codex` 仍不会被当作 Images 模型。
+
+两个 `-exact` 模型会严格按 `--size WIDTHxHEIGHT` 输出；宽高必须分别在 64-4096 之间，总像素不超过 `4096x4096`。`gpt-image-2-high` 可用 `medium` / `high`；官方 Flare 与 Sunburst 渠道可用 `low` / `medium` / `high` / `xhigh` / `max`。同名 Flare / Sunburst 的实际能力取决于控制台分配的渠道。
+
+Gemini 使用 `--aspect-ratio` 与 `--image-size 1K|2K|4K`，尺寸只写入 `generationConfig.imageConfig`。程序按当前文档优先读取 `file_data.file_uri` / `fileData.fileUri`，其次读取 Markdown 图片链接，并兼容 `inlineData` Base64；不会再发送 `responseFormat`。自动比例应省略 `--aspect-ratio`，不要传 `auto`。
+
+查看当前 Key 可用、且能由此 Skill 路由的图片模型：
+
+```powershell
+python .\skills\linyi-image\scripts\generate.py --list-models
+```
+
+## 命令行使用
+
+仓库要求 Python 3.10 或更高版本。安装 Skill 后，也可以直接运行其中的脚本：
+
+```powershell
+python .\skills\linyi-image\scripts\generate.py `
+  --model gpt-image-2 `
+  --prompt "白底产品图，无文字" `
+  --size 1024x1024 `
+  --output outputs\prompt-studio\product.png `
+  --count 10 `
+  --concurrency 2
+```
+
+直接执行图生图：
+
+```powershell
+python .\skills\linyi-image\scripts\generate.py `
+  --model gpt-image-2.5 `
+  --input-image assets\source.png `
+  --input-image assets\style.png `
+  --prompt "保持主体不变，把背景改成雪山" `
+  --output outputs\prompt-studio\edited.png
+```
+
+常用参数：
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `--model` | `gpt-image-2` | 模型 ID |
+| `--protocol` | `auto` | `auto`、`openai` 或 `gemini` |
+| `--output` | 自动命名 | 默认写入 `LINYI_OUTPUT_DIR` 或 `outputs/prompt-studio`；显式路径优先 |
+| `--name` | 输出文件名 | 网页历史中显示的任务名称 |
+| `--gallery-dir` | 共享输出目录 | 写入网页任务历史和图库元数据的根目录 |
+| `--input-image` | 无 | 图生图参考文件；可重复传入最多 5 次，支持 PNG、JPEG、WebP，每张最大 20 MiB |
+| `--size` | 自动 | OpenAI Images 尺寸；GPT 使用像素，Nano Banana 还接受比例或 `1K` / `2K` / `4K` |
+| `--quality` | 无 | High 支持 `medium/high`；官方 Flare / Sunburst 支持 `low` 至 `max` |
+| `--aspect-ratio` | 自动 | Gemini 原生比例，如 `1:1`、`3:4`、`16:9`；自动比例时省略 |
+| `--image-size` | 自动 | Gemini 原生分辨率：`1K`、`2K` 或 `4K`，K 必须大写 |
+| `--count` | `1` | 生成数量，范围 1-100 |
+| `--concurrency` | `1` | 并发请求数，至少为 1，实际不会超过生成数量 |
+| `--timeout` | `600` | 请求超时秒数 |
+| `--retries` | `0` | 临时错误重试次数，范围 0-5；默认关闭以避免重复计费 |
+| `--retry-delay` | `3` | 首次重试等待秒数，范围 0-60 |
+| `--check` | 关闭 | 只检查指定模型是否可用 |
+| `--list-models` | 关闭 | 列出当前 Key 可见且可识别的图片模型 |
+| `--no-progress` | 关闭 | 关闭 stderr 中的人类可读实时状态 |
+| `--no-history` | 关闭 | 不写入网页任务历史元数据 |
+
+## 运行状态与结果
+
+生成过程中，脚本会在 stderr 实时输出请求开始、重试、完成和失败状态。超过 30 秒的任务会定期显示真实等待时间：
+
+```text
+[start] model=gpt-image-2.5 protocol=openai mode=text-to-image requests=4 concurrency=2 timeout=600s
+[request 1/4] started
+[waiting] elapsed=30.0s active=1 completed=0/4 succeeded=0 failed=0
+[request 1/4] completed duration=91.2s size=14.40MiB dimensions=3840x2160
+[complete] duration=143.8s requested=4 succeeded=3 failed=1
+```
+
+API 不提供真实生成百分比，因此脚本只报告可验证的状态和已用时间，不显示虚假进度条。
+
+脚本完成后在 stdout 输出与网页 `/api/jobs/<id>` 一致的任务 JSON：顶层包括任务 ID、名称、状态、提示词、模型、协议、尺寸、数量、并发和时间，`result` 中包括模式、总耗时、成功数、失败数，以及每张图片的耗时、尝试次数、实际分辨率、文件大小、路径或错误。Python 直调和网页创作历史读取同一份数据；任务异常时也会记录为失败，不会一直停留在“生成中”。只要有一张失败，进程退出码即为 `1`，已经成功的文件会保留。
+
+Codex 会把结果整理成便于阅读的表格：
+
+| 序号 | 状态 | 耗时 | 实际分辨率 | 大小 | 尝试次数 | 文件或错误 |
+| --- | --- | ---: | --- | ---: | ---: | --- |
+| 1 | 成功 | 91.2s | 3840x2160 | 14.4 MiB | 1 | `outputs/prompt-studio/image-001.png` |
+
+## 并发与重试
+
+脚本不设置固定并发上限，实际并发不会超过 `--count`；单批生成数量最多为 100。服务端仍可能根据账户、模型和线路状态执行限流，建议从 2-4 开始，再逐步调整。
+
+本项目对 `gpt-image-2` 进行过 10 并发验证：10 个请求成功 8 个，2 个因上游 `image_poll_timeout` 失败。该结果仅表示测试时的线路状态，不构成可用性保证。
+
+自动重试默认关闭，因为超时或断线时上游可能已经完成并计费，但客户端没有收到响应。确实需要重试时可使用 `--retries 1-5`；重试前先检查任务历史和已生成文件。
+
+## 常见问题
+
+| 错误 | 处理方式 |
+| --- | --- |
+| `未找到 API Key` | Windows 可在网页“连接设置”中保存；其他系统的跨进程调用请设置 `LINYI_API_KEY` |
+| 图库没有显示新图片 | 点击图库中的刷新按钮，并确认图片位于当前工作台的输出目录 |
+| `401` / `403` | 检查 Key、余额和模型分组权限 |
+| `429` | 降低并发；确认没有已完成的计费请求后，再决定是否显式重试 |
+| `image_poll_timeout` | 上游生成超时；保留已成功文件，仅补跑失败任务 |
+| 模型检查失败 | 使用 `--list-models` 查看当前 Key 实际可用模型 |
+| Gemini 请求失败 | 确认使用 Gemini 协议；使用 `--aspect-ratio` 和大写 `--image-size 1K|2K|4K`，不要传 `--size` |
+
+## 项目结构
+
+```text
+skills/
+└── linyi-image/
+    ├── SKILL.md
+    ├── agents/openai.yaml
+    ├── assets/prompt-studio/index.html
+    └── scripts/
+        ├── generate.py
+        └── prompt_studio.py
+```
+
+## 文档与支持
+
+- [Codex + CC Switch 图文配置教程](docs/codex-cc-switch.md)
+- [模型与价格](https://image.linyiai.one/pricing)
+- [linyi API 官方文档](https://image.linyiai.one/)
+- [GPT Image 2 接口文档](https://image.linyiai.one/docs/image/gpt-image-2)
+- [Nano Banana 接口文档](https://image.linyiai.one/docs/image/nano-banana)
+- [安全问题报告](SECURITY.md)
+
+## 贡献者
+
+- [yukkcat](https://github.com/yukkcat)
+- [BaikalLamb](https://github.com/BaikalLamb)
+
+模型、价格、限额和可用性以 linyi API 控制台及官方文档为准。Linyi Skills 使用 [MIT License](LICENSE) 发布。
