@@ -35,7 +35,7 @@ Windows 用户通常选择 Windows 安装包。安装完成后启动 CC Switch�
 
 ## 第三步：创建 linyi API Key
 
-打开 [linyi API Key 管理页面](https://image.linyiai.one/keys)，点击创建新的 API Key。
+打开 [linyi 控制台](https://image.linyiai.one/)，创建新的 API Key。
 
 建议按下面方式填写：
 

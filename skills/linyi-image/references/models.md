@@ -1,6 +1,6 @@
 # linyi 图片模型
 
-信息基准：linyi 官方文档，2026-09-10。调用细节以 https://image.linyiai.one/docs/image/gpt-image-2 与 https://image.linyiai.one/docs/image/nano-banana 为准；实际可用模型以当前 Key 的 `GET /v1/models` 响应和 API 控制台分配为准。
+信息基准：linyi 控制台与本 Skill 实测，2026-09-10。调用细节与可用性以 https://image.linyiai.one/ 及当前 Key 的 `GET /v1/models` 响应为准。
 
 | 模型 | 协议 | 说明 |
 | --- | --- | --- |

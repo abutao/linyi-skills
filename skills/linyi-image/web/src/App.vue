@@ -818,7 +818,7 @@
                 <div><h2>创建 Key 并配置连接</h2><p>一个工作台可以保存多个连接，每个连接有独立的 API 地址、Key、模型列表和默认模型。</p></div>
               </header>
               <ol class="guide-checklist">
-                <li><span>1</span><p>前往 linyi 控制台创建 API Key。</p><a href="https://image.linyiai.one/keys" target="_blank" rel="noreferrer">创建 Key<Icon icon="lucide:arrow-up-right" /></a></li>
+                <li><span>1</span><p>前往 linyi 控制台创建 API Key。</p><a href="https://image.linyiai.one/" target="_blank" rel="noreferrer">创建 Key<Icon icon="lucide:arrow-up-right" /></a></li>
                 <li><span>2</span><p>打开连接设置，填写名称、API 地址和 Key。</p><Button size="sm" variant="outline" @click="openConnection"><Icon icon="lucide:settings-2" />打开设置</Button></li>
                 <li><span>3</span><p>点击“同步模型”，在弹窗中选择默认模型，然后保存并设为当前连接。</p></li>
               </ol>

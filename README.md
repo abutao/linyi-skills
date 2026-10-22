@@ -32,7 +32,7 @@ linyi API 的 Codex Skills 集合。安装后，可直接让 Codex 调用 linyi 
 使用 $linyi-image 打开本地提示词工作台。
 ```
 
-程序会打开 `http://127.0.0.1:8765`。首次启动会在后台从 [yukkcat/image-prompts](https://github.com/yukkcat/image-prompts) 的 `dist/manifest.json` 和标准化提示词快照下载全部内置提示词；后续启动直接读取本地缓存，旧版逐个来源缓存会自动迁移。当前快照包含 7 个来源（包括 Freestylefly GPT Image 2）。网页支持搜索、来源与分类筛选、文生图/图生图、批量数量、并发设置和实时生成状态。图生图可以通过文件选择、拖拽或剪贴板粘贴一次添加最多 5 张参考图，并逐张预览或移除。打开旧任务后可以修改提示词、模型、尺寸、连接、数量等参数继续生成；新图片会作为新批次追加到原任务，旧图片和各自的生成参数都会保留。需要完全独立的任务时再点击“新建”。
+程序会打开 `http://127.0.0.1:8765`。首次启动会加载内置提示词库（含多来源模板快照），后续启动直接读取本地缓存。网页支持搜索、来源与分类筛选、文生图/图生图、批量数量、并发设置和实时生成状态。图生图可以通过文件选择、拖拽或剪贴板粘贴一次添加最多 5 张参考图，并逐张预览或移除。打开旧任务后可以修改提示词、模型、尺寸、连接、数量等参数继续生成；新图片会作为新批次追加到原任务，旧图片和各自的生成参数都会保留。需要完全独立的任务时再点击“新建”。
 
 工作台每 12 小时至多检查一次 GitHub 版本标签。发现新版后，顶部会显示“更新”入口；“指南 → 更新 Skill”中可以重新检查、查看对应标签或复制给 Codex 的安全更新指令。工作台只负责提醒，不会自行覆盖正在使用的 Skill，也不会触碰连接设置、API Key 或图库文件。
 
@@ -46,7 +46,7 @@ linyi API 的 Codex Skills 集合。安装后，可直接让 Codex 调用 linyi 
 
 ### 部署到 Vercel
 
-把本仓库导入 Vercel 后直接部署即可，根目录的 `vercel.json` 已包含构建命令和输出目录，不需要在 Vercel 配置 API Key 或其他环境变量。同一套 Vue 页面会自动判断运行环境：由 Python 启动时使用本地 API、共享图库和 Codex 历史；静态部署时使用浏览器运行时并直接请求 linyi API。浏览器版点击“同步”也会直接从 `yukkcat/image-prompts` 拉取并校验最新 registry；随构建发布的快照用于首次显示和网络失败时回退。
+把本仓库导入 Vercel 后直接部署即可，根目录的 `vercel.json` 已包含构建命令和输出目录，不需要在 Vercel 配置 API Key 或其他环境变量。同一套 Vue 页面会自动判断运行环境：由 Python 启动时使用本地 API、共享图库和 Codex 历史；静态部署时使用浏览器运行时并直接请求 linyi API。浏览器版可同步提示词库；随构建发布的本地快照用于首次显示和网络失败时回退。
 
 云端页面中的连接、加密 Key、图片和任务历史都保存在当前浏览器的 IndexedDB 中，不会上传到 Vercel，也不会与其他访问者共享。浏览器 Key 使用不可导出的 Web Crypto 密钥加密保存。清除站点数据会同时清除这些本地数据；不同浏览器或设备之间不会自动同步，关闭页面也会中断尚未完成的生成任务。
 
@@ -80,7 +80,7 @@ python ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github
 
 ### 2. 配置 API Key
 
-先在[linyi API 控制台](https://image.linyiai.one/keys)创建 Key。在 Windows 上，只需在网页右上角打开“连接设置”，填写 Key 后点击“测试连接”和“保存设置”。网页生成和 Codex 直接调用 `generate.py` 都会使用当前选中的连接，无需再配置 `.env` 或系统环境变量。
+先在 [linyi 控制台](https://image.linyiai.one/) 创建 Key。在 Windows 上，只需在网页右上角打开“连接设置”，填写 Key 后点击“测试连接”和“保存设置”。网页生成和 Codex 直接调用 `generate.py` 都会使用当前选中的连接，无需再配置 `.env` 或系统环境变量。
 
 自动化部署，或者在 macOS、Linux、WSL 中跨进程调用时，可以复制根目录的 `.env.example`：
 
@@ -270,16 +270,9 @@ skills/
 
 ## 文档与支持
 
+- [linyi 官网 / API 控制台](https://image.linyiai.one/)
+- [本仓库](https://github.com/abutao/linyi-skills)
 - [Codex + CC Switch 图文配置教程](docs/codex-cc-switch.md)
-- [模型与价格](https://image.linyiai.one/pricing)
-- [linyi API 官方文档](https://image.linyiai.one/)
-- [GPT Image 2 接口文档](https://image.linyiai.one/docs/image/gpt-image-2)
-- [Nano Banana 接口文档](https://image.linyiai.one/docs/image/nano-banana)
 - [安全问题报告](SECURITY.md)
 
-## 贡献者
-
-- [yukkcat](https://github.com/yukkcat)
-- [BaikalLamb](https://github.com/BaikalLamb)
-
-模型、价格、限额和可用性以 linyi API 控制台及官方文档为准。Linyi Skills 使用 [MIT License](LICENSE) 发布。
+模型、价格、限额和可用性以 [linyi 控制台](https://image.linyiai.one/) 为准。Linyi Skills 使用 [MIT License](LICENSE) 发布。
